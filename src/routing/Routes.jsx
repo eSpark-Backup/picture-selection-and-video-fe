@@ -13,8 +13,16 @@ import Detailed from "../pages/Detailed";
 import EditImage from "../components/EditImage";
 
 const AppRoutes = () => {
-  const { home, uploads, uploadImage, notFound, login, users, userDetail, editImageForReviewer } =
-    PATHS;
+  const {
+    home,
+    uploads,
+    uploadImage,
+    notFound,
+    login,
+    users,
+    userDetail,
+    editImageForReviewer,
+  } = PATHS;
 
   return (
     <Routes>
