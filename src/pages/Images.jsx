@@ -119,9 +119,9 @@ const Images = () => {
   const handleDeleteImage = async (id) => {
     try {
       const res = await deleteImage({ id }).unwrap();
-      if (res?.data) {
-        toast.success("Image deleted successfully!");
+      if (res?.success) {
         dispatch(apiSlice.util.invalidateTags(["Images"]));
+        toast.success("Image deleted successfully!");
       }
     } catch (err) {
       toast.error("Image delete failed!");

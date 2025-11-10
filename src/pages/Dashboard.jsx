@@ -16,15 +16,43 @@ const DashboardPage = () => {
   const { data, isLoading: isUsersLoading } = useGetDashboardQuery();
   const users = data?.data || [];
 
-  const tableData = users?.map(({ photo_id, status, user }) => ({
-    id: user?.user_id,
-    name: user?.first_name,
-    email: user?.email,
-    phone: user?.phone,
-    status: status,
-    photo_id: photo_id,
+  // const tableData = users?.map(({ photo_id, status, user }) => ({
+  //   id: user?.user_id,
+  //   name: user?.first_name,
+  //   email: user?.email,
+  //   phone: user?.phone,
+  //   status: status,
+  //   photo_id: photo_id,
+  // }));
+
+  // console.log(tableData, "tableData");
+
+  const groupedData = Object?.values(
+    users?.reduce((acc, { photo_id, status, user }) => {
+      if (!acc[user?.user_id]) {
+        acc[user?.user_id] = {
+          id: user?.user_id,
+          name: user?.first_name,
+          email: user?.email,
+          phone: user?.phone,
+          photos: [],
+        };
+      }
+      acc[user?.user_id]?.photos?.push({ photo_id, status });
+      return acc;
+    }, {})
+  );
+
+  const tableData = groupedData.map((user) => ({
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    phone: user.phone,
+    status: user.photos[0]?.status || "N/A",
+    photo_id: user.photos[0]?.photo_id,
   }));
 
+  console.log(tableData, "groupedData");
   const tableColumns = [
     { id: "name", label: "Name" },
     { id: "email", label: "Email" },
