@@ -50,24 +50,7 @@ const Detailed = () => {
 
   const { data, refetch, isLoading } = useGetDashboardQuery();
 
-  const users = data?.data || [
-    {
-      photo_id: 1,
-      photo_url:
-        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRuNhTZJTtkR6b-ADMhmzPvVwaLuLdz273wvQ&s",
-      filename: "Khan_Ali_20251022104041056402.jpg",
-      status: "pending",
-      created_at: "2025-10-22T10:42:01.990268",
-      updated_at: "2025-10-22T10:42:01.990268",
-      user: {
-        user_id: 2,
-        first_name: "Ali",
-        last_name: "Khan",
-        email: "ali1234@gmail.com",
-        phone: "05832919284",
-      },
-    },
-  ];
+  const users = data?.data || [];
 
   const userImages = users?.filter(
     (item) => item?.user?.user_id === Number(id)
@@ -76,7 +59,7 @@ const Detailed = () => {
   const handleDeleteImage = async (id) => {
     try {
       const res = await deleteImage({ id }).unwrap();
-      if (res?.data) {
+      if (res?.success) {
         toast.success("Image deleted successfully!");
         refetch();
       }

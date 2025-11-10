@@ -109,13 +109,12 @@ const Upload = () => {
 
         const res = await uploadImage({ id, formData }).unwrap();
 
-        if (res?.data) {
+        if (res.success) {
           toast.success("Image uploaded successfully!");
           setCropping(false);
           dispatch(apiSlice.util.invalidateTags(["Images"]));
-          setTimeout(() => navigate("/uploads"), 1000);
-        } else {
-          toast.error("Upload failed!");
+          navigate("/uploads");
+          // setTimeout(() => navigate("/uploads"), 1000);
         }
       } catch (err) {
         console.error("Upload error:", err);
