@@ -37,6 +37,7 @@ const Upload = () => {
   const initialFile = location.state?.file;
   const imageUrl = image;
   const dispatch = useDispatch();
+  const [croppedBlob, setCroppedBlob] = useState(null);
 
   useEffect(() => {
     if (initialFile) {
@@ -70,59 +71,58 @@ const Upload = () => {
     return detections.length > 0;
   }, []);
 
+  const handleSave = useCallback(async () => {
+    try {
+      const formData = new FormData();
+
+      if (croppedBlob) {
+        const fileType = croppedBlob.type || "image/jpeg";
+        const extension = fileType.split("/")[1] || "jpg";
+        const fileName = `cropped_${Date.now()}.${extension}`;
+        const file = new File([croppedBlob], fileName, { type: fileType });
+        formData.append("files", file);
+      } else {
+        formData.append("files", initialFile);
+      }
+
+      const res = await uploadImage({ id, formData }).unwrap();
+
+      if (res.success) {
+        toast.success("Image uploaded successfully!");
+        setCropping(false);
+        dispatch(apiSlice.util.invalidateTags(["Images"]));
+        navigate("/uploads");
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+      toast.error("Something went wrong during upload");
+    }
+  }, [uploadImage, id, initialFile, croppedBlob, navigate, dispatch]);
+
   const handleCrop = useCallback(async () => {
     try {
       if (!imageUrl) return;
+
       const { blob, url } = await getCroppedImg(
         imageUrl.url,
         croppedAreaPixels
       );
+
       const hasFace = await detectFacesInBlob(blob);
       if (!hasFace) {
         toast.info("No face detected in cropped image.");
         return;
       }
+
+      setCroppedBlob(blob);
       setCroppedImageUrl(url);
       setCropping(false);
-      return { blob, url };
+      toast.success("Image cropped successfully!");
     } catch (err) {
       console.error("Crop error:", err);
       toast.error("Something went wrong while cropping");
     }
   }, [imageUrl, croppedAreaPixels, detectFacesInBlob]);
-
-  const handleSave = useCallback(
-    async (blob, url) => {
-      try {
-        const formData = new FormData();
-
-        if (blob && url) {
-          const fileType = blob.type || "application/octet-stream";
-          const extension = fileType.split("/")[1] || "bin";
-          const fileName = `image_${Date.now()}.${extension}`;
-          const file = new File([blob], fileName, { type: fileType });
-
-          formData.append("files", file);
-        } else {
-          formData.append("files", initialFile);
-        }
-
-        const res = await uploadImage({ id, formData }).unwrap();
-
-        if (res.success) {
-          toast.success("Image uploaded successfully!");
-          setCropping(false);
-          dispatch(apiSlice.util.invalidateTags(["Images"]));
-          navigate("/uploads");
-          // setTimeout(() => navigate("/uploads"), 1000);
-        }
-      } catch (err) {
-        console.error("Upload error:", err);
-        toast.error("Something went wrong during upload");
-      }
-    },
-    [uploadImage, id, initialFile, setCropping, navigate, dispatch]
-  );
 
   const onCropComplete = useCallback((_, croppedPixels) => {
     setCroppedAreaPixels(croppedPixels);
