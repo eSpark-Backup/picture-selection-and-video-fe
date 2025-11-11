@@ -92,6 +92,9 @@ const DashboardPage = () => {
 
       if (res) {
         toast.success(`Video created successfully`);
+        setTimeout(() => {
+          toast.success(`Video send successfully`);
+        }, 3000);
         console.log("Server Response:", res.data);
       }
     } catch (err) {

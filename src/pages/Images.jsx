@@ -145,6 +145,11 @@ const Images = () => {
         toast.success(`Thank you! Your photos are submitted`);
         setTimeout(() => {
           toast.info(`We’ll email you when your holograms are ready`);
+
+          setTimeout(() => {
+            localStorage.removeItem("accessToken");
+            window.location.href = "/";
+          }, 3000);
         }, 5000);
         console.log("Server Response:", res.data);
       }
@@ -160,7 +165,9 @@ const Images = () => {
         <Stack spacing={1.5} alignItems="center">
           <Stack spacing={1} alignItems="center" textAlign="center">
             <Typography variant="h4" fontWeight={600}>
-              {`Add your photos: (${images?.length}/30 uploaded)`}
+              {`Add your photos: (${
+                images && images.length ? images.length : 0
+              }/30 uploaded)`}
             </Typography>
             <Typography variant="body2">
               Only upload clear, focused face photos.
