@@ -44,7 +44,6 @@ const EditImage = () => {
   });
 
   const [croppedBlob, setCroppedBlob] = useState(null);
-
   const imageData = data?.data || {};
 
   useEffect(() => {
@@ -100,7 +99,7 @@ const EditImage = () => {
         formData.append("file", fileFromUrl);
       }
 
-      const res = await editImage({ id, formData }).unwrap();
+      const res = await editImage({ id: imageId, formData }).unwrap();
 
       if (res?.success) {
         toast.success("Cropped image uploaded successfully!");
