@@ -59,7 +59,7 @@ export const reviewerApiSlice = apiSlice.injectEndpoints({
         method: "PUT",
         body: formData,
       }),
-      invalidatesTags: ["single-image"],
+      invalidatesTags: ["single-image", "users"],
     }),
 
     deleteImageForReviewer: builder.mutation({
