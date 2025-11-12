@@ -30,9 +30,10 @@ export const reviewerApiSlice = apiSlice.injectEndpoints({
     }),
 
     getDashboard: builder.query({
-      query: () => ({
+      query: ({ page = 1, limit = 30 } = {}) => ({
         url: REVIEWER_DASHBOARD,
         method: "GET",
+        params: { page, limit },
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
