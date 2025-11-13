@@ -16,17 +16,6 @@ const DashboardPage = () => {
   const { data, isLoading: isUsersLoading } = useGetDashboardQuery();
   const users = data?.data || [];
 
-  // const tableData = users?.map(({ photo_id, status, user }) => ({
-  //   id: user?.user_id,
-  //   name: user?.first_name,
-  //   email: user?.email,
-  //   phone: user?.phone,
-  //   status: status,
-  //   photo_id: photo_id,
-  // }));
-
-  // console.log(tableData, "tableData");
-
   const groupedData = Object?.values(
     users?.reduce((acc, { photo_id, status, user }) => {
       if (!acc[user?.user_id]) {
@@ -52,7 +41,6 @@ const DashboardPage = () => {
     photo_id: user.photos[0]?.photo_id,
   }));
 
-  console.log(tableData, "groupedData");
   const tableColumns = [
     { id: "name", label: "Name" },
     { id: "email", label: "Email" },
@@ -66,8 +54,6 @@ const DashboardPage = () => {
         id,
         data: { status: newStatus.toLowerCase() },
       }).unwrap();
-
-      console.log(`✅ Status of user ${id} updated to ${newStatus}`);
     } catch (err) {
       console.error("❌ Failed to update:", err);
       toast.error("Status update failed! Please try again.");
@@ -95,7 +81,6 @@ const DashboardPage = () => {
         setTimeout(() => {
           toast.success(`Video send successfully`);
         }, 3000);
-        console.log("Server Response:", res.data);
       }
     } catch (err) {
       console.error("Video failed:", err);

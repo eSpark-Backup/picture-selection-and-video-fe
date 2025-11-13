@@ -117,10 +117,10 @@ const Upload = () => {
       setCroppedBlob(blob);
       setCroppedImageUrl(url);
       setCropping(false);
-      toast.success("Image cropped successfully!");
+      toast.success("Image adjusted successfully!");
     } catch (err) {
       console.error("Crop error:", err);
-      toast.error("Something went wrong while cropping");
+      toast.error("Something went wrong while adjusting");
     }
   }, [imageUrl, croppedAreaPixels, detectFacesInBlob]);
 

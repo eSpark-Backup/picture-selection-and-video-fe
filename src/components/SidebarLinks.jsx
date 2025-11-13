@@ -28,7 +28,7 @@ const Sidebar = () => {
   const location = useLocation();
   const theme = useTheme();
   const dispatch = useDispatch();
-  const { name, email } = useSelector((state) => state.reviewer.current) || {};
+  const { username, email } = useSelector((state) => state.reviewer.current) || {};
 
   const [open, setOpen] = useState(false);
   const handleOpen = () => setOpen(true);
@@ -46,7 +46,7 @@ const Sidebar = () => {
         <Box sx={avatarContainer}>
           <Avatar src={DefUser} sx={avatar(theme)} />
           <TruncatedTooltipText
-            text={name}
+            text={username}
             maxWidth={140}
             variant="subtitle1"
             fontWeight={600}

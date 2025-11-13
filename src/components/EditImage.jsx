@@ -75,17 +75,14 @@ const EditImage = () => {
       const formData = new FormData();
 
       if (croppedBlob) {
-        // ✅ Upload cropped image
         const fileType = croppedBlob.type || "image/jpeg";
         const extension = fileType.split("/")[1] || "jpg";
         const fileName = `cropped_${Date.now()}.${extension}`;
         const file = new File([croppedBlob], fileName, { type: fileType });
 
-        console.log("Uploading cropped image:", file);
         formData.append("file", file);
       } else {
-        // fallback — original image
-        console.warn("No cropped blob found, uploading original image");
+        console.warn("No adjust blob found, uploading original image");
         const response = await fetch(imageData?.photo_url);
         const blobFromUrl = await response.blob();
 
@@ -102,7 +99,7 @@ const EditImage = () => {
       const res = await editImage({ id: imageId, formData }).unwrap();
 
       if (res?.success) {
-        toast.success("Cropped image uploaded successfully!");
+        toast.success("adjusted image uploaded successfully!");
         setCropping(false);
         navigate(`/user/${id}`);
       }
@@ -130,10 +127,10 @@ const EditImage = () => {
       setCroppedBlob(blob);
       setCroppedImageUrl(url);
       setCropping(false);
-      toast.success("Image cropped successfully!");
+      toast.success("Image adjusted successfully!");
     } catch (err) {
       console.error("Crop error:", err);
-      toast.error("Something went wrong while cropping");
+      toast.error("Something went wrong while adjusting");
     }
   }, [imageData?.photo_url, croppedAreaPixels, detectFacesInBlob]);
 
