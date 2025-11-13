@@ -53,7 +53,7 @@ const ReviewerForm = () => {
         const response = await reviewerLogin(formData).unwrap();
         toast.success("Successfully Logged In");
         localStorage.setItem("token", response?.access_token);
-        dispatch(addReviewer(response));
+        dispatch(addReviewer(response?.reviewer));
         navigate("/dashboard");
       } catch (error) {
         console.error("Error logging in:", error);

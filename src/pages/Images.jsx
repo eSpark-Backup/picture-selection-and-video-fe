@@ -13,8 +13,6 @@ import { toast } from "react-toastify";
 import * as faceapi from "face-api.js";
 import { useDeleteImageMutation, useGetImagesQuery } from "../services/image";
 import { useSubmitImagesMutation } from "../services/processImage";
-import { useDispatch } from "react-redux";
-import { apiSlice } from "../api/apiSlice";
 import { IMAGES_STYLE } from "../style";
 
 const StandardImageList = ({ images = [], handleDeleteImage = () => {} }) => {
@@ -52,12 +50,10 @@ const Images = () => {
   const [submitImages, { isLoading: submitLoading }] =
     useSubmitImagesMutation();
 
-  const { data, isLoading } = useGetImagesQuery({
+  const { data, isLoading, refetch } = useGetImagesQuery({
     id: id,
   });
 
-  const images = data?.data;
-  const dispatch = useDispatch();
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
 
@@ -120,8 +116,8 @@ const Images = () => {
     try {
       const res = await deleteImage({ id }).unwrap();
       if (res?.success) {
-        dispatch(apiSlice.util.invalidateTags(["Images"]));
         toast.success("Image deleted successfully!");
+        refetch();
       }
     } catch (err) {
       toast.error("Image delete failed!");
@@ -131,7 +127,7 @@ const Images = () => {
 
   const handleSubmit = async () => {
     try {
-      const photo_ids = images?.map((img) => img?.photo_id);
+      const photo_ids = data?.data?.map((img) => img?.photo_id);
 
       if (!photo_ids?.length) {
         toast.info("No images to submit");
@@ -143,6 +139,7 @@ const Images = () => {
 
       if (res) {
         toast.success(`Thank you! Your photos are submitted`);
+        refetch();
         setTimeout(() => {
           toast.info(`We’ll email you when your holograms are ready`);
 
@@ -151,7 +148,6 @@ const Images = () => {
             window.location.href = "/";
           }, 3000);
         }, 5000);
-        console.log("Server Response:", res.data);
       }
     } catch (err) {
       console.error("Submit failed:", err);
@@ -166,7 +162,7 @@ const Images = () => {
           <Stack spacing={1} alignItems="center" textAlign="center">
             <Typography variant="h4" fontWeight={600}>
               {`Add your photos: (${
-                images && images.length ? images.length : 0
+                data?.data && data?.data.length ? data?.data.length : 0
               }/30 uploaded)`}
             </Typography>
             <Typography variant="body2">
@@ -206,9 +202,9 @@ const Images = () => {
         </Stack>
 
         <Box sx={scrollBox}>
-          {images?.length > 0 ? (
+          {data?.data?.length > 0 ? (
             <StandardImageList
-              images={images}
+              images={data?.data}
               handleDeleteImage={handleDeleteImage}
             />
           ) : isLoading ? (
