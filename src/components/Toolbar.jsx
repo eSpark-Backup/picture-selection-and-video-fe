@@ -49,10 +49,10 @@ const Toolbar = ({
               color: "primary.main",
             },
           }}
-          onClick={() => {
-            if (onSaveLoading || addImageLoading || onSaveDisabled) return;
-            onCrop(true);
-          }}
+          // onClick={() => {
+          //   if (onSaveLoading || addImageLoading || onSaveDisabled) return;
+          //   onCrop(true);
+          // }}
         >
           {onSaveLoading || addImageLoading ? (
             <CircularProgress size="25px" sx={{ px: 1 }} />

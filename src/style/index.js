@@ -360,8 +360,10 @@ const DETAILED_STYLE = {
   iconStack: {
     position: "absolute",
     zIndex: 1,
-    top: -2,
-    right: -2,
+    top: 0,
+    p: "8px",
+    right: 0.5,
+    left: 0.5,
     cursor: "pointer",
   },
 
