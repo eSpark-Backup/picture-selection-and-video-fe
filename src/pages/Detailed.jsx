@@ -29,7 +29,27 @@ const StandardImageList = ({
               onClick={() => navigate(`/user/${userId}/${item?.photo_id}`)}
               sx={image}
             />
-            <Stack direction={"row"} spacing={0.3} sx={iconStack}>
+            <Stack
+              direction={"row"}
+              justifyContent={"space-between"}
+              sx={iconStack}
+            >
+              <Box
+                sx={{
+                  py: 0.5,
+                  px: 1.5,
+                  borderRadius: "999px",
+                  backgroundColor: "#fff",
+                  color: "black",
+                }}
+              >
+                <Typography
+                  fontSize={{ xs: "10px", sm: "10.5px", md: "12px" }}
+                  textTransform={"capitalize"}
+                >
+                  {item?.status}
+                </Typography>
+              </Box>
               <HighlightOffIcon
                 onClick={() => handleDeleteImage(item?.photo_id)}
                 sx={deleteIcon}
