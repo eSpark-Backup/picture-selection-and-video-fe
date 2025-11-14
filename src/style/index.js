@@ -346,14 +346,16 @@ const DETAILED_STYLE = {
 
   image: {
     width: "100%",
-    height: { xs: 105, sm: 140, md: 160, lg: 200 },
+    minWidth: "140px",
+    height: { xs: 140, sm: 140, md: 160, lg: 200 },
     objectFit: "contain",
     objectPosition: "center",
+    backgroundColor: "black",
     cursor: "pointer",
     display: "block",
     "@media(max-width: 374px)": {
       width: "100%",
-      height: "130px",
+      height: 180,
     },
   },
 
