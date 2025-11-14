@@ -29,7 +29,7 @@ const StandardImageList = ({
               onClick={() => navigate(`/user/${userId}/${item?.photo_id}`)}
               sx={image}
             />
-            <Stack direction={"row"} spacing={1} sx={iconStack}>
+            <Stack direction={"row"} spacing={0.3} sx={iconStack}>
               <HighlightOffIcon
                 onClick={() => handleDeleteImage(item?.photo_id)}
                 sx={deleteIcon}

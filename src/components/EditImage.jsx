@@ -6,6 +6,7 @@ import {
   Button,
   Stack,
   LinearProgress,
+  Typography,
 } from "@mui/material";
 import Cropper from "react-easy-crop";
 import * as faceapi from "face-api.js";
@@ -16,6 +17,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   useEditImageMutation,
   useGetImageByIdQuery,
+  useUpdatePhotoStatusMutation,
 } from "../services/reviewer";
 import { createImage, getCroppedImg } from "../services/_utils";
 import { EDIT_IMAGE_STYLE } from "../style";
@@ -31,7 +33,7 @@ const EditImage = () => {
     slider,
     button,
   } = EDIT_IMAGE_STYLE || {};
-  const [cropping, setCropping] = useState(false);
+  const [cropping, setCropping] = useState(true);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
@@ -39,7 +41,9 @@ const EditImage = () => {
   const { id, imageId } = useParams({});
   const [croppedImageUrl, setCroppedImageUrl] = useState(null);
   const [editImage, { isLoading: upLoading }] = useEditImageMutation();
-  const { data, isLoading } = useGetImageByIdQuery({
+  const [updatePhotoStatus, { isLoading: isUpdating }] =
+    useUpdatePhotoStatusMutation();
+  const { data, isLoading, refetch } = useGetImageByIdQuery({
     id: imageId,
   });
 
@@ -68,6 +72,35 @@ const EditImage = () => {
       new faceapi.TinyFaceDetectorOptions()
     );
     return detections.length > 0;
+  }, []);
+
+  const handleCrop = useCallback(async () => {
+    try {
+      if (!imageData?.photo_url) return;
+
+      const { blob, url } = await getCroppedImg(
+        imageData?.photo_url,
+        croppedAreaPixels
+      );
+
+      const hasFace = await detectFacesInBlob(blob);
+      if (!hasFace) {
+        toast.info("No face detected in cropped image.");
+        return;
+      }
+
+      setCroppedBlob(blob);
+      setCroppedImageUrl(url);
+      setCropping(false);
+      toast.success("Image adjusted successfully!");
+    } catch (err) {
+      console.error("Crop error:", err);
+      toast.error("Something went wrong while adjusting");
+    }
+  }, [imageData?.photo_url, croppedAreaPixels, detectFacesInBlob]);
+
+  const onCropComplete = useCallback((_, croppedPixels) => {
+    setCroppedAreaPixels(croppedPixels);
   }, []);
 
   const handleSave = useCallback(async () => {
@@ -109,34 +142,21 @@ const EditImage = () => {
     }
   }, [editImage, id, imageData, croppedBlob, navigate]);
 
-  const handleCrop = useCallback(async () => {
+  const handleStatusChange = async (id, newStatus) => {
     try {
-      if (!imageData?.photo_url) return;
+      await updatePhotoStatus({
+        id,
+        data: { status: newStatus.toLowerCase() },
+      }).unwrap();
 
-      const { blob, url } = await getCroppedImg(
-        imageData?.photo_url,
-        croppedAreaPixels
-      );
+      toast.success("Status updated successfully!");
 
-      const hasFace = await detectFacesInBlob(blob);
-      if (!hasFace) {
-        toast.info("No face detected in cropped image.");
-        return;
-      }
-
-      setCroppedBlob(blob);
-      setCroppedImageUrl(url);
-      setCropping(false);
-      toast.success("Image adjusted successfully!");
+      refetch();
     } catch (err) {
-      console.error("Crop error:", err);
-      toast.error("Something went wrong while adjusting");
+      console.error("❌ Failed to update:", err);
+      toast.error("Status update failed! Please try again.");
     }
-  }, [imageData?.photo_url, croppedAreaPixels, detectFacesInBlob]);
-
-  const onCropComplete = useCallback((_, croppedPixels) => {
-    setCroppedAreaPixels(croppedPixels);
-  }, []);
+  };
 
   if (isLoading) {
     return <LinearProgress />;
@@ -147,12 +167,12 @@ const EditImage = () => {
       <Grid container sx={gridContainer}>
         <Grid size={12} sx={toolbarGrid}>
           <Toolbar
-            onCrop={setCropping}
+            onCrop={handleCrop}
             onSave={handleSave}
-            onSaveLoading={upLoading || isLoading}
-            onSaveDisabled={cropping}
+            onSaveLoading={upLoading || isLoading || isUpdating}
           />
         </Grid>
+        <Guide />
 
         <Grid size={12} sx={imageGrid}>
           {cropping ? (
@@ -162,7 +182,7 @@ const EditImage = () => {
                 crop={crop}
                 zoom={zoom}
                 aspect={1}
-                cropShape="round"
+                objectFit="contain"
                 showGrid={false}
                 onCropChange={setCrop}
                 onZoomChange={setZoom}
@@ -179,9 +199,7 @@ const EditImage = () => {
             <Box component="img" src={croppedImageUrl} sx={croppedImage} />
           ) : imageData?.photo_url ? (
             <Box component="img" src={imageData?.photo_url} sx={croppedImage} />
-          ) : (
-            <Guide />
-          )}
+          ) : null}
         </Grid>
         <Grid sx={12}>
           {cropping && (
@@ -191,20 +209,33 @@ const EditImage = () => {
                 min={1}
                 max={3}
                 step={0.1}
+                disabled={isUpdating || upLoading}
                 onChange={(e, z) => setZoom(z)}
-                sx={slider}
               />
+              <Typography variant="body1">
+                Status: {imageData?.status || "pending"}
+              </Typography>
               <Stack direction={"row"} spacing={1.5}>
-                <Button variant="contained" onClick={handleCrop} sx={button}>
-                  Save
+                <Button
+                  variant="contained"
+                  disabled={isUpdating || upLoading}
+                  onClick={() =>
+                    handleStatusChange(imageData?.photo_id, "approved")
+                  }
+                  sx={button}
+                >
+                  Approved
                 </Button>
                 <Button
                   variant="contained"
+                  disabled={isUpdating || upLoading}
                   color="accent"
-                  onClick={() => setCropping(false)}
+                  onClick={() =>
+                    handleStatusChange(imageData?.photo_id, "rejected")
+                  }
                   sx={button}
                 >
-                  Cancel
+                  Rejected
                 </Button>
               </Stack>
             </Stack>
@@ -213,13 +244,12 @@ const EditImage = () => {
             <Button
               variant="contained"
               onClick={() => navigate(`/user/${id}`)}
-              loading={upLoading || isLoading}
-              disabled={upLoading || cropping}
+              disabled={upLoading || isLoading || isUpdating}
               sx={button}
             >
               {"Go to back"}
             </Button>
-          </Stack>
+          </Stack>{" "}
         </Grid>
       </Grid>
     </Box>
