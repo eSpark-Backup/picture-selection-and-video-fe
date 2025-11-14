@@ -37,7 +37,8 @@ const DashboardPage = () => {
     name: user.name,
     email: user.email,
     phone: user.phone,
-    status: user.photos[0]?.status || "N/A",
+    status:
+      user?.photos?.every((photo) => photo?.status === "approved") || false,
     photo_id: user.photos[0]?.photo_id,
   }));
 
@@ -45,7 +46,6 @@ const DashboardPage = () => {
     { id: "name", label: "Name" },
     { id: "email", label: "Email" },
     { id: "phone", label: "Phone Number" },
-    { id: "status", label: "Status" },
   ];
 
   const handleStatusChange = async (id, newStatus) => {

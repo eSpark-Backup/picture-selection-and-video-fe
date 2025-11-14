@@ -6,7 +6,12 @@ import { DYNAMIC_TABLE_STYLE } from "../style";
 
 const STATUS_OPTIONS = ["pending", "approved", "rejected"];
 
-const DynamicDataGrid = ({ rows, columns, onStatusChange, onClick }) => {
+const DynamicDataGrid = ({
+  rows = [],
+  columns = [],
+  onStatusChange = () => {},
+  onClick = () => {},
+}) => {
   const { gridBox, grid } = DYNAMIC_TABLE_STYLE || {};
   const enhancedColumns = [
     ...columns.map((col) => ({
@@ -53,6 +58,7 @@ const DynamicDataGrid = ({ rows, columns, onStatusChange, onClick }) => {
           </IconButton>
           <IconButton
             color="warning"
+            disabled={!params?.row?.status}
             onClick={() => onClick("edit", params.row)}
           >
             <SlowMotionVideoIcon />

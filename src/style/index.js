@@ -508,7 +508,7 @@ const EDIT_IMAGE_STYLE = {
   cropBox: {
     position: "relative",
     mx: "auto",
-    width: "80vw",
+    width: "100vw",
     height: "35vh",
     minHeight: 250,
     overflow: "hidden",

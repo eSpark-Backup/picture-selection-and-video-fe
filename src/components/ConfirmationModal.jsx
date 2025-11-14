@@ -10,6 +10,8 @@ import { CONFIRM_MODAL_STYLE } from "../style";
 export default function ConfirmationModal({
   open = false,
   onClose = () => {},
+  cancelLoading = false,
+  confirmLoading = false,
   heading = "Are you sure you want to continue?",
   content = "This action cannot be undone. Please confirm to continue.",
   onConfirm = () => {},
@@ -31,6 +33,7 @@ export default function ConfirmationModal({
                 {heading}
               </Typography>
               <Typography
+                width={"fit-content"}
                 textAlign={{ xs: "center", sm: "start" }}
                 letterSpacing={1}
                 variant="body2"
@@ -45,6 +48,7 @@ export default function ConfirmationModal({
                 color="accent"
                 fullWidth
                 sx={cancelButton}
+                disabled={cancelLoading}
                 onClick={onClose}
               >
                 {"Cancel"}
@@ -53,6 +57,7 @@ export default function ConfirmationModal({
                 variant="contained"
                 color="primary"
                 fullWidth
+                loading={confirmLoading}
                 sx={confirmButton}
                 onClick={onConfirm}
               >
