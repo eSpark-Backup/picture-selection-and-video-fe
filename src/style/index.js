@@ -382,7 +382,7 @@ const DETAILED_STYLE = {
 const HOME_STYLE = {
   mainStack: {
     minHeight: "100vh",
-    justifyContent: "center",
+    justifyContent: { xs: "center", md: "center" },
     alignItems: "center",
     backgroundColor: "#f9fcff",
   },
