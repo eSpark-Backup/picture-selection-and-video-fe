@@ -20,11 +20,11 @@ export const imageApiSlice = apiSlice.injectEndpoints({
         url: `${SINGLE_IMAGE}${id}`,
         method: "GET",
         headers: {
-          Accept: "application/json",
           "Content-Type": "application/json",
+          Accept: "application/json",
         },
       }),
-      providesTags: (result, error, { id }) => [{ type: "SingleImage", id }],
+      providesTags: ["SingleImage"],
     }),
 
     uploadImage: builder.mutation({

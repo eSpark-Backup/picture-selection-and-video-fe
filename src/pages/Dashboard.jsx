@@ -3,69 +3,56 @@ import DynamicTable from "../components/DynamicTable";
 import {
   useCreateVideoMutation,
   useGetDashboardQuery,
-  useUpdatePhotoStatusMutation,
 } from "../services/reviewer";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+function formatToLocal(isoTimestamp) {
+  const cleanISO = isoTimestamp.split(".")[0] + "Z";
+  return dayjs.utc(cleanISO).tz(dayjs.tz.guess()).format("DD-MM-YYYY hh:mm A");
+}
 
 const DashboardPage = () => {
-  const [updatePhotoStatus, { isLoading: isUpdating }] =
-    useUpdatePhotoStatusMutation();
   const [createVideo, { isLoading: videoLoading }] = useCreateVideoMutation();
   const navigate = useNavigate();
   const { data, isLoading: isUsersLoading } = useGetDashboardQuery();
   const users = data?.data || [];
 
-  const groupedData = Object?.values(
-    users?.reduce((acc, { photo_id, status, user }) => {
-      if (!acc[user?.user_id]) {
-        acc[user?.user_id] = {
-          id: user?.user_id,
-          name: user?.first_name,
-          email: user?.email,
-          phone: user?.phone,
-          photos: [],
-        };
-      }
-      acc[user?.user_id]?.photos?.push({ photo_id, status });
-      return acc;
-    }, {})
-  );
+  const tableData = users.map((user) => {
+    const photos = user?.photos || [];
 
-  const tableData = groupedData.map((user) => ({
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    phone: user.phone,
-    status:
-      user?.photos?.every((photo) => photo?.status === "approved") || false,
-    photo_id: user.photos[0]?.photo_id,
-  }));
+    return {
+      id: user.user_id,
+      name: `${user.first_name} ${user.last_name}`,
+      email: user.email,
+      phone: user.phone,
+      created_at: user.created_at ? formatToLocal(user.created_at) : "",
+      status:
+        photos.length > 0
+          ? photos.every((photo) => photo.status !== "pending")
+          : false,
+      // photo_id: photos[0]?.photo_id || null,
+    };
+  });
 
   const tableColumns = [
+    { id: "created_at", label: "Created" },
     { id: "name", label: "Name" },
     { id: "email", label: "Email" },
     { id: "phone", label: "Phone Number" },
   ];
 
-  const handleStatusChange = async (id, newStatus) => {
-    try {
-      await updatePhotoStatus({
-        id,
-        data: { status: newStatus.toLowerCase() },
-      }).unwrap();
-    } catch (err) {
-      console.error("❌ Failed to update:", err);
-      toast.error("Status update failed! Please try again.");
-    }
-  };
-
   const handleCreateVideo = async (data) => {
-    const userImages = users?.filter(
-      (item) => item?.user?.user_id === Number(data.id)
-    );
+    const userImages = users?.find((item) => item?.user_id === Number(data.id));
+
     try {
-      const photo_ids = userImages?.map((img) => img?.photo_id);
+      const photo_ids = userImages?.photos?.map((img) => img?.photo_id);
 
       if (!photo_ids.length) {
         toast.info("No images to submit");
@@ -109,7 +96,6 @@ const DashboardPage = () => {
         <DynamicTable
           rows={tableData}
           columns={tableColumns}
-          onStatusChange={handleStatusChange}
           onClick={handleClickAction}
         />
       </Box>

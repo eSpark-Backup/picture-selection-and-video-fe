@@ -46,6 +46,3 @@ export async function getCroppedImg(imageSrc, croppedAreaPixels) {
     }, "image/jpeg");
   });
 }
-
-
-

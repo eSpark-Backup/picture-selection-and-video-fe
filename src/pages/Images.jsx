@@ -1,3 +1,6 @@
+// ---------------------------------------------------------
+// IMPORTS
+// ---------------------------------------------------------
 import {
   Box,
   Button,
@@ -10,33 +13,74 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import * as faceapi from "face-api.js";
-import {
-  useDeleteImageMutation,
-  useGetImagesQuery,
-  useUploadImageMutation,
-} from "../services/image";
+import { useGetImagesQuery, useUploadImageMutation } from "../services/image";
 import { useSubmitImagesMutation } from "../services/processImage";
 import { IMAGES_STYLE } from "../style";
 import ConfirmationModal from "../components/ConfirmationModal";
 
-const StandardImageList = ({ images = [], handleDeleteImage = () => {} }) => {
+// ---------------------------------------------------------
+// IMAGE → BASE64 + COMPRESS
+// ---------------------------------------------------------
+const fileToBase64 = (file) =>
+  new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target.result);
+    reader.readAsDataURL(file);
+  });
+
+async function compressBase64(base64Str) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.src = base64Str;
+
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const MAX = 900;
+      let width = img.width;
+      let height = img.height;
+
+      if (width > MAX || height > MAX) {
+        if (width > height) {
+          height *= MAX / width;
+          width = MAX;
+        } else {
+          width *= MAX / height;
+          height = MAX;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, width, height);
+
+      resolve(canvas.toDataURL("image/jpeg", 0.7));
+    };
+  });
+}
+
+const base64ToFile = async (base64, fileName) => {
+  const res = await fetch(base64);
+  const blob = await res.blob();
+  return new File([blob], fileName, { type: blob.type });
+};
+
+// ---------------------------------------------------------
+// IMAGE LIST
+// ---------------------------------------------------------
+const StandardImageList = ({ images, handleDeleteImage }) => {
   const { imageListContainer, imageBox, image, deleteIconStack, deleteIcon } =
     IMAGES_STYLE || {};
 
   return (
-    <Box sx={imageListContainer(images?.length)}>
-      {images?.map((item, index) => (
+    <Box sx={imageListContainer(images.length)}>
+      {images.map((item, index) => (
         <Box key={index} sx={imageBox}>
-          <Box
-            component="img"
-            sx={image}
-            src={item?.photo_url}
-            alt={`${item?.photo_id}`}
-            loading="lazy"
-          />
-          <Stack direction="row" spacing={1} sx={deleteIconStack}>
+          <img src={item.base64} style={image} alt="preview" />
+
+          <Stack sx={deleteIconStack}>
             <HighlightOffIcon
-              onClick={() => handleDeleteImage(item?.photo_id)}
+              onClick={() => handleDeleteImage(index)}
               sx={deleteIcon}
             />
           </Stack>
@@ -46,35 +90,54 @@ const StandardImageList = ({ images = [], handleDeleteImage = () => {} }) => {
   );
 };
 
+// ---------------------------------------------------------
+// MAIN COMPONENT
+// ---------------------------------------------------------
 const Images = () => {
+  const navigate = useNavigate();
+  const fileInputRef = useRef(null);
+  const id = localStorage.getItem("accessToken");
+
   const { container, innerStack, uploadButton, submitButton, scrollBox } =
     IMAGES_STYLE || {};
-  const id = localStorage.getItem("accessToken");
-  const [modelsLoaded, setModelsLoaded] = useState(false);
 
-  const [deleteImage] = useDeleteImageMutation();
+  const [localImages, setLocalImages] = useState([]);
+  const [modelsLoaded, setModelsLoaded] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [processingImages, setProcessingImages] = useState(false);
   const [uploadImage, { isLoading: uploadLoading }] = useUploadImageMutation();
   const [submitImages, { isLoading: submitLoading }] =
     useSubmitImagesMutation();
-  const [open, setOpen] = useState(false);
-
   const { data, isLoading, refetch } = useGetImagesQuery({ id });
-  const navigate = useNavigate();
-  const fileInputRef = useRef(null);
-
-  const handleClick = () => fileInputRef.current.click();
-
+  // ---------------------------------------------------------
+  // LOAD FACE API MODELS & LOCAL STORAGE IMAGES
+  // ---------------------------------------------------------
   useEffect(() => {
     const loadModels = async () => {
-      await Promise.all([
-        faceapi.nets.tinyFaceDetector.loadFromUri("/models"),
-        faceapi.nets.faceLandmark68Net.loadFromUri("/models"),
-      ]);
-      setModelsLoaded(true);
+      try {
+        await faceapi.nets.tinyFaceDetector.loadFromUri("/models");
+        setModelsLoaded(true);
+      } catch (e) {
+        console.error("Model load error", e);
+      }
     };
+
     loadModels();
+
+    const saved = JSON.parse(localStorage.getItem("localImages") || "[]");
+    setLocalImages(saved);
   }, []);
 
+  // ---------------------------------------------------------
+  // SAVE LOCAL STORAGE
+  // ---------------------------------------------------------
+  const saveLocal = (arr) => {
+    localStorage.setItem("localImages", JSON.stringify(arr));
+  };
+
+  // ---------------------------------------------------------
+  // LOAD IMAGE ELEMENT FOR FACE DETECTION
+  // ---------------------------------------------------------
   const loadImage = (src) =>
     new Promise((resolve) => {
       const img = new Image();
@@ -83,163 +146,161 @@ const Images = () => {
       img.src = src;
     });
 
-  // const handleFileChange = async (e) => {
-  //   const files = Array.from(e.target.files);
-  //   if (!files.length) return;
+  // ---------------------------------------------------------
+  // FACE DETECTION
+  // ---------------------------------------------------------
+  const simpleFaceCheck = async (img) => {
+    try {
+      const detections = await faceapi.detectAllFaces(
+        img,
+        new faceapi.TinyFaceDetectorOptions({
+          inputSize: 416,
+          scoreThreshold: 0.2,
+        })
+      );
+      return detections.length > 0;
+    } catch (err) {
+      console.error("Face detection failed:", err);
+      return false;
+    }
+  };
 
-  //   if (!modelsLoaded) {
-  //     toast.info("Please wait, face detection is loading...");
-  //     return;
-  //   }
-
-  //   let uploadedCount = 0;
-
-  //   for (let file of files) {
-  //     const imageURL = URL.createObjectURL(file);
-  //     const img = await loadImage(imageURL);
-
-  //     try {
-  //       const detections = await faceapi.detectAllFaces(
-  //         img,
-  //         new faceapi.TinyFaceDetectorOptions()
-  //       );
-
-  //       if (detections.length === 0) {
-  //         toast.error(`${file.name}: No human face detected`);
-  //         continue;
-  //       }
-
-  //       const formData = new FormData();
-  //       formData.append("files", file);
-
-  //       const res = await uploadImage({ id, formData }).unwrap();
-  //       if (res?.success) {
-  //         uploadedCount += 1;
-  //       }
-  //     } catch (err) {
-  //       console.error(err);
-  //       toast.error(`${file.name} upload failed!`);
-  //     } finally {
-  //       URL.revokeObjectURL(imageURL);
-  //     }
-  //   }
-
-  //   if (uploadedCount > 0) {
-  //     toast.success(`${uploadedCount} photo uploaded successfully!`);
-  //     refetch();
-  //   }
-  // };
-
+  // ---------------------------------------------------------
+  // ADD IMAGES
+  // ---------------------------------------------------------
   const handleFileChange = async (e) => {
-    const files = Array.from(e.target.files);
-    if (!files.length) return;
-
-    const existingCount = data?.data?.length || 0;
-    const totalCount = existingCount + files.length;
-
-    if (totalCount > 30) {
-      toast.info(`You can only upload up to 30 photos.`);
-
-      setTimeout(() => {
-        toast.info(`You have already uploaded ${existingCount}.`);
-      }, 1500);
-
-      return;
-    }
-
     if (!modelsLoaded) {
-      toast.info("Please wait, face detection is loading...");
+      toast.error("Checking face model not loaded. Try again.");
       return;
     }
 
-    let uploadedCount = 0;
+    setProcessingImages(true);
+
+    let files = [...e.target.files];
+
+    if (localImages.length + files.length > 30) {
+      toast.error("Max 30 photos allowed");
+      setProcessingImages(false);
+      return;
+    }
+
+    const newImages = [];
 
     for (let file of files) {
-      const imageURL = URL.createObjectURL(file);
-      const img = await loadImage(imageURL);
+      let base64 = await fileToBase64(file);
+      base64 = await compressBase64(base64);
 
-      try {
-        const detections = await faceapi.detectAllFaces(
-          img,
-          new faceapi.TinyFaceDetectorOptions()
-        );
+      const imgEl = await loadImage(base64);
+      const hasFace = await simpleFaceCheck(imgEl);
 
-        if (detections.length === 0) {
-          toast.error(`${file.name}: No human face detected`);
-          continue;
-        }
-
-        const formData = new FormData();
-        formData.append("files", file);
-
-        const res = await uploadImage({ id, formData }).unwrap();
-        if (res?.success) {
-          uploadedCount += 1;
-        }
-      } catch (err) {
-        console.error(err);
-        toast.error(`${file.name} upload failed!`);
-      } finally {
-        URL.revokeObjectURL(imageURL);
+      if (!hasFace) {
+        toast.info(`${file.name}: No human face found`);
+        continue;
       }
+
+      newImages.push({
+        name: file.name,
+        base64,
+        file,
+        uploaded: false,
+        photo_id: null,
+      });
     }
 
-    if (uploadedCount > 0) {
-      toast.success(`${uploadedCount} photo uploaded successfully!`);
-      refetch();
-    }
+    const updated = [...localImages, ...newImages];
+    setLocalImages(updated);
+    saveLocal(updated);
+
+    setProcessingImages(false);
+  };
+  // ---------------------------------------------------------
+  // DELETE IMAGE
+  // ---------------------------------------------------------
+  const handleDeleteLocalImage = (index) => {
+    const updated = localImages.filter((_, i) => i !== index);
+    setLocalImages(updated);
+    saveLocal(updated);
   };
 
-  const handleDeleteImage = async (photo_id) => {
-    try {
-      const res = await deleteImage({ id: photo_id }).unwrap();
-      if (res?.success) {
-        toast.success("Image deleted successfully!");
-        refetch();
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to delete image!");
-    }
-  };
-
+  // ---------------------------------------------------------
+  // SUBMIT PROCESS
+  // ---------------------------------------------------------
   const handleSubmit = async () => {
-    try {
-      const photo_ids = data?.data?.map((img) => img?.photo_id);
-      if (!photo_ids?.length) {
-        toast.info("No images to submit");
-        return;
-      }
+    if (!localImages.length) {
+      toast.error("Upload photos first");
+      return;
+    }
 
-      const res = await submitImages({ id, body: { photo_ids } }).unwrap();
-      if (res) {
-        toast.success("Thank you! Your photos are submitted.");
-        setOpen(false);
-        // refetch();
-        setTimeout(() => {
-          toast.info("We’ll email you when your holograms are ready");
-          setTimeout(() => {
-            localStorage.removeItem("accessToken");
-            navigate("/");
-          }, 3000);
-        }, 5000);
-      }
+    for (let imgObj of localImages) {
+      let file;
+
+      if (imgObj.uploaded) continue;
+
+      file = await base64ToFile(imgObj.base64, imgObj.name);
+
+      const formData = new FormData();
+      formData.append("files", file);
+
+      await uploadImage({ id, formData }).unwrap();
+
+      imgObj.uploaded = true;
+    }
+
+    // Save updated uploaded status
+    saveLocal(localImages);
+
+    let freshData;
+    try {
+      const response = await refetch();
+      freshData = response.data?.data || [];
     } catch (err) {
-      console.error(err);
-      toast.error("Image submission failed!");
+      toast.error("Failed to get uploaded photos");
+      return;
+    }
+
+    const photo_ids = freshData.map((item) => item.photo_id);
+
+    if (!photo_ids.length) {
+      toast.error("No photos to submit");
+      return;
+    }
+
+    try {
+      await submitImages({
+        id,
+        body: { photo_ids },
+      }).unwrap();
+
+      toast.success("Photos submitted successfully!");
+      setLocalImages([]);
+      localStorage.removeItem("localImages");
+      setOpen(false);
+
+      setTimeout(() => {
+        toast.info("We’ll email you when your holograms are ready");
+        setTimeout(() => {
+          localStorage.removeItem("accessToken");
+          navigate("/");
+        }, 3000);
+      }, 5000);
+    } catch (err) {
+      toast.error("Final submission failed!");
     }
   };
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
 
+  // ---------------------------------------------------------
+  // UI
+  // ---------------------------------------------------------
   return (
     <Stack sx={container}>
       <Stack sx={innerStack}>
         <Stack spacing={1.5} alignItems="center">
           <Stack spacing={1} alignItems="center" textAlign="center">
             <Typography variant="h4" fontWeight={600}>
-              {`Add your photos: ${data?.data?.length || 0}/30 uploaded`}
+              {`Add your photos: ${localImages.length}/30 uploaded`}
             </Typography>
             <Typography variant="body2">
               Only upload clear, focused face photos.
@@ -250,9 +311,13 @@ const Images = () => {
             <Button
               variant="contained"
               color="accent"
-              onClick={handleClick}
-              loading={uploadLoading}
-              disabled={data?.data?.length >= 30 || uploadLoading}
+              onClick={() => fileInputRef.current.click()}
+              disabled={
+                localImages.length >= 30 ||
+                uploadLoading ||
+                submitLoading ||
+                processingImages
+              }
               sx={uploadButton}
             >
               Upload Photos
@@ -270,8 +335,9 @@ const Images = () => {
             <Button
               variant="contained"
               onClick={handleOpen}
-              disabled={uploadLoading || data?.data?.length === 0}
-              loading={submitLoading}
+              disabled={
+                uploadLoading || submitLoading || localImages.length === 0
+              }
               sx={submitButton}
             >
               Submit Photos
@@ -281,20 +347,32 @@ const Images = () => {
 
         <ConfirmationModal
           open={open}
-          onClose={handleClose}
+          onClose={submitLoading || uploadLoading ? () => {} : handleClose}
           onConfirm={handleSubmit}
-          cancelLoading={submitLoading}
-          content={"click cancel to upload more images or confirm to submit."}
+          cancelLoading={submitLoading || uploadLoading}
+          confirmLoading={submitLoading || uploadLoading}
+          content={
+            uploadLoading
+              ? "Your images are being uploaded. Please wait..."
+              : submitLoading
+              ? "Your photos are being submitted. Please wait..."
+              : "Click cancel to upload more images or confirm to submit."
+          }
         />
 
         <Box sx={scrollBox}>
-          {data?.data?.length > 0 ? (
+          {localImages.length > 0 ? (
             <StandardImageList
-              images={data?.data}
-              handleDeleteImage={handleDeleteImage}
+              images={localImages}
+              handleDeleteImage={handleDeleteLocalImage}
             />
-          ) : isLoading ? (
-            <CircularProgress size={30} />
+          ) : processingImages ? (
+            <Stack spacing={1} alignItems={"center"}>
+              <CircularProgress size={30} />
+              <Typography variant="body2">
+                Uploading your photos... Please wait
+              </Typography>
+            </Stack>
           ) : null}
         </Box>
       </Stack>

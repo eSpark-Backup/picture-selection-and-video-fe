@@ -72,9 +72,8 @@ const Detailed = () => {
 
   const users = data?.data || [];
 
-  const userImages = users?.filter(
-    (item) => item?.user?.user_id === Number(id)
-  );
+  const userImages =
+    users?.find((item) => item?.user_id === Number(id))?.photos || [];
 
   const handleDeleteImage = async (id) => {
     try {
