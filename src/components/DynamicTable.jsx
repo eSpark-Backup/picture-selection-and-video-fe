@@ -11,6 +11,11 @@ const DynamicDataGrid = ({
   columns = [],
   onStatusChange = () => {},
   onClick = () => {},
+
+  page = 0,
+  limit = 0,
+  total = 0,
+  onPageChange = () => {},
 }) => {
   const { gridBox, grid } = DYNAMIC_TABLE_STYLE || {};
   const enhancedColumns = [
@@ -77,9 +82,16 @@ const DynamicDataGrid = ({
         disableColumnMenu
         disableSelectionOnClick
         initialState={{
-          pagination: { paginationModel: { pageSize: 12, page: 0 } },
+          pagination: { paginationModel: { pageSize: 10, page: 0 } },
         }}
-        pageSizeOptions={[12, 25, 50]}
+        page={page}
+        pageSize={limit}
+        rowCount={total}
+        paginationMode="server"
+        onPaginationModelChange={(model) => {
+          onPageChange(model.page);
+        }}
+        pageSizeOptions={[10, 20, 30]}
         getRowId={(row) => row.id}
         hideFooterSelectedRowCount
         sx={grid}
