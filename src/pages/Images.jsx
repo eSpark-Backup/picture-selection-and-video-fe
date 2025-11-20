@@ -1,6 +1,3 @@
-// ---------------------------------------------------------
-// IMPORTS
-// ---------------------------------------------------------
 import {
   Box,
   Button,
@@ -13,8 +10,10 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import * as faceapi from "face-api.js";
-import { useGetImagesQuery, useUploadImageMutation } from "../services/image";
+
+import { useUploadImageMutation } from "../services/image";
 import { useSubmitImagesMutation } from "../services/processImage";
+
 import { IMAGES_STYLE } from "../style";
 import ConfirmationModal from "../components/ConfirmationModal";
 
@@ -51,6 +50,7 @@ async function compressBase64(base64Str) {
 
       canvas.width = width;
       canvas.height = height;
+
       const ctx = canvas.getContext("2d");
       ctx.drawImage(img, 0, 0, width, height);
 
@@ -66,7 +66,7 @@ const base64ToFile = async (base64, fileName) => {
 };
 
 // ---------------------------------------------------------
-// IMAGE LIST
+// IMAGE LIST COMPONENT
 // ---------------------------------------------------------
 const StandardImageList = ({ images, handleDeleteImage }) => {
   const { imageListContainer, imageBox, image, deleteIconStack, deleteIcon } =
@@ -105,20 +105,21 @@ const Images = () => {
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [open, setOpen] = useState(false);
   const [processingImages, setProcessingImages] = useState(false);
+
   const [uploadImage, { isLoading: uploadLoading }] = useUploadImageMutation();
   const [submitImages, { isLoading: submitLoading }] =
     useSubmitImagesMutation();
-  const { data, isLoading, refetch } = useGetImagesQuery({ id });
+
   // ---------------------------------------------------------
-  // LOAD FACE API MODELS & LOCAL STORAGE IMAGES
+  // LOAD FACE API MODELS + LOAD LOCAL STORAGE IMAGES
   // ---------------------------------------------------------
   useEffect(() => {
     const loadModels = async () => {
       try {
         await faceapi.nets.tinyFaceDetector.loadFromUri("/models");
         setModelsLoaded(true);
-      } catch (e) {
-        console.error("Model load error", e);
+      } catch (err) {
+        console.error("Face Model Load Error:", err);
       }
     };
 
@@ -128,16 +129,10 @@ const Images = () => {
     setLocalImages(saved);
   }, []);
 
-  // ---------------------------------------------------------
-  // SAVE LOCAL STORAGE
-  // ---------------------------------------------------------
   const saveLocal = (arr) => {
     localStorage.setItem("localImages", JSON.stringify(arr));
   };
 
-  // ---------------------------------------------------------
-  // LOAD IMAGE ELEMENT FOR FACE DETECTION
-  // ---------------------------------------------------------
   const loadImage = (src) =>
     new Promise((resolve) => {
       const img = new Image();
@@ -146,9 +141,6 @@ const Images = () => {
       img.src = src;
     });
 
-  // ---------------------------------------------------------
-  // FACE DETECTION
-  // ---------------------------------------------------------
   const simpleFaceCheck = async (img) => {
     try {
       const detections = await faceapi.detectAllFaces(
@@ -160,17 +152,16 @@ const Images = () => {
       );
       return detections.length > 0;
     } catch (err) {
-      console.error("Face detection failed:", err);
       return false;
     }
   };
 
   // ---------------------------------------------------------
-  // ADD IMAGES
+  // ADD NEW IMAGES
   // ---------------------------------------------------------
   const handleFileChange = async (e) => {
     if (!modelsLoaded) {
-      toast.error("Checking face model not loaded. Try again.");
+      toast.error("Face model not loaded");
       return;
     }
 
@@ -194,14 +185,13 @@ const Images = () => {
       const hasFace = await simpleFaceCheck(imgEl);
 
       if (!hasFace) {
-        toast.info(`${file.name}: No human face found`);
+        toast.info(`${file.name}: No face detected`);
         continue;
       }
 
       newImages.push({
         name: file.name,
         base64,
-        file,
         uploaded: false,
         photo_id: null,
       });
@@ -213,8 +203,9 @@ const Images = () => {
 
     setProcessingImages(false);
   };
+
   // ---------------------------------------------------------
-  // DELETE IMAGE
+  // DELETE LOCAL IMAGE
   // ---------------------------------------------------------
   const handleDeleteLocalImage = (index) => {
     const updated = localImages.filter((_, i) => i !== index);
@@ -232,44 +223,34 @@ const Images = () => {
     }
 
     for (let imgObj of localImages) {
-      let file;
-
       if (imgObj.uploaded) continue;
 
-      file = await base64ToFile(imgObj.base64, imgObj.name);
-
+      const file = await base64ToFile(imgObj.base64, imgObj.name);
       const formData = new FormData();
       formData.append("files", file);
 
-      await uploadImage({ id, formData }).unwrap();
+      const res = await uploadImage({ id, formData }).unwrap();
+
+      const uploadedList = res?.data || [];
+      const lastUploaded = uploadedList[uploadedList.length - 1];
 
       imgObj.uploaded = true;
+      imgObj.photo_id = lastUploaded?.photo_id || null;
     }
 
-    // Save updated uploaded status
     saveLocal(localImages);
 
-    let freshData;
-    try {
-      const response = await refetch();
-      freshData = response.data?.data || [];
-    } catch (err) {
-      toast.error("Failed to get uploaded photos");
-      return;
-    }
-
-    const photo_ids = freshData.map((item) => item.photo_id);
+    const photo_ids = localImages
+      .filter((img) => img.photo_id)
+      .map((img) => img.photo_id);
 
     if (!photo_ids.length) {
-      toast.error("No photos to submit");
+      toast.error("No valid photo_ids found");
       return;
     }
 
     try {
-      await submitImages({
-        id,
-        body: { photo_ids },
-      }).unwrap();
+      await submitImages({ id, body: { photo_ids } }).unwrap();
 
       toast.success("Photos submitted successfully!");
       setLocalImages([]);
@@ -278,6 +259,7 @@ const Images = () => {
 
       setTimeout(() => {
         toast.info("We’ll email you when your holograms are ready");
+
         setTimeout(() => {
           localStorage.removeItem("accessToken");
           navigate("/");
@@ -289,7 +271,8 @@ const Images = () => {
   };
 
   const handleOpen = () => setOpen(true);
-  const handleClose = () => setOpen(false);
+  const handleClose = () =>
+    submitLoading || uploadLoading ? () => {} : setOpen(false);
 
   // ---------------------------------------------------------
   // UI
@@ -298,16 +281,25 @@ const Images = () => {
     <Stack sx={container}>
       <Stack sx={innerStack}>
         <Stack spacing={1.5} alignItems="center">
-          <Stack spacing={1} alignItems="center" textAlign="center">
-            <Typography variant="h4" fontWeight={600}>
-              {`Add your photos: ${localImages.length}/30 uploaded`}
-            </Typography>
-            <Typography variant="body2">
-              Only upload clear, focused face photos.
-            </Typography>
-          </Stack>
+          <Typography
+            variant="h4"
+            fontWeight={600}
+            px={1.5}
+            textAlign={{ xs: "center", sm: "start" }}
+          >
+            {`Add your photos: ${localImages?.length}/30 uploaded`}
+          </Typography>
 
-          <Stack direction="row" justifyContent="center" spacing={1.5}>
+          <Typography variant="body2">
+            Only upload clear, focused face photos.
+          </Typography>
+
+          <Stack
+            direction="row"
+            justifyContent="center"
+            spacing={1.5}
+            width={{ xs: "95%" }}
+          >
             <Button
               variant="contained"
               color="accent"
@@ -347,7 +339,7 @@ const Images = () => {
 
         <ConfirmationModal
           open={open}
-          onClose={submitLoading || uploadLoading ? () => {} : handleClose}
+          onClose={handleClose}
           onConfirm={handleSubmit}
           cancelLoading={submitLoading || uploadLoading}
           confirmLoading={submitLoading || uploadLoading}

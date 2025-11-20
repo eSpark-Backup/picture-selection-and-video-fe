@@ -30,7 +30,7 @@ export const reviewerApiSlice = apiSlice.injectEndpoints({
     }),
 
     getDashboard: builder.query({
-      query: ({ page = 1, limit = 30 } = {}) => ({
+      query: ({ page = 10, limit = 10 } = {}) => ({
         url: REVIEWER_DASHBOARD,
         method: "GET",
         params: { page, limit },

@@ -9,6 +9,7 @@ import { toast } from "react-toastify";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
+import { useState } from "react";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -19,10 +20,17 @@ function formatToLocal(isoTimestamp) {
 }
 
 const DashboardPage = () => {
+  const [page, setPage] = useState(0); // DataGrid page starts 0
+  const [limit, setLimit] = useState(10); // pageSize
   const [createVideo, { isLoading: videoLoading }] = useCreateVideoMutation();
   const navigate = useNavigate();
-  const { data, isLoading: isUsersLoading } = useGetDashboardQuery();
+  const { data, isLoading: isUsersLoading } = useGetDashboardQuery({
+    page: page + 1,
+    limit,
+  });
+
   const users = data?.data || [];
+  const total = data?.total_users || 0;
 
   const tableData = users.map((user) => {
     const photos = user?.photos || [];
@@ -97,6 +105,12 @@ const DashboardPage = () => {
           rows={tableData}
           columns={tableColumns}
           onClick={handleClickAction}
+          page={page}
+          limit={limit}
+          total={total}
+          setPage={setPage}
+          setLimit={setLimit}
+          onPageChange={(newPage) => setPage(newPage)}
         />
       </Box>
     </Box>
