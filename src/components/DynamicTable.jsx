@@ -15,7 +15,10 @@ const DynamicDataGrid = ({
   page = 0,
   limit = 0,
   total = 0,
+  setPage,
+  setLimit,
   onPageChange = () => {},
+  onPageSizeChange = () => {},
 }) => {
   const { gridBox, grid } = DYNAMIC_TABLE_STYLE || {};
   const enhancedColumns = [
@@ -90,6 +93,7 @@ const DynamicDataGrid = ({
         paginationMode="server"
         onPaginationModelChange={(model) => {
           onPageChange(model.page);
+          onPageSizeChange(model.pageSize);
         }}
         pageSizeOptions={[10, 20, 30]}
         getRowId={(row) => row.id}

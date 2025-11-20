@@ -12,7 +12,6 @@ import { toast } from "react-toastify";
 import * as faceapi from "face-api.js";
 
 import { useUploadImageMutation } from "../services/image";
-import { useSubmitImagesMutation } from "../services/processImage";
 
 import { IMAGES_STYLE } from "../style";
 import ConfirmationModal from "../components/ConfirmationModal";
@@ -107,8 +106,6 @@ const Images = () => {
   const [processingImages, setProcessingImages] = useState(false);
 
   const [uploadImage, { isLoading: uploadLoading }] = useUploadImageMutation();
-  const [submitImages, { isLoading: submitLoading }] =
-    useSubmitImagesMutation();
 
   // ---------------------------------------------------------
   // LOAD FACE API MODELS + LOAD LOCAL STORAGE IMAGES
@@ -216,63 +213,188 @@ const Images = () => {
   // ---------------------------------------------------------
   // SUBMIT PROCESS
   // ---------------------------------------------------------
+  // const handleSubmit = async () => {
+  //   if (!localImages?.length) {
+  //     toast.error("Upload photos first");
+  //     return;
+  //   }
+
+  //   for (let imgObj of localImages) {
+  //     if (imgObj.uploaded) continue;
+
+  //     const file = await base64ToFile(imgObj.base64, imgObj.name);
+  //     const formData = new FormData();
+  //     formData.append("files", file);
+
+  //     const res = await uploadImage({ id, formData }).unwrap();
+  //     imgObj.uploaded = true;
+  //     saveLocal(localImages);
+  //     if (res?.success) {
+  //       toast.success("Photos submitted successfully!");
+  //       setLocalImages([]);
+  //       localStorage.removeItem("localImages");
+  //       setOpen(false);
+  //       setTimeout(() => {
+  //         toast.info("We’ll email you when your holograms are ready");
+  //         setTimeout(() => {
+  //           localStorage.removeItem("accessToken");
+  //           navigate("/");
+  //         }, 3000);
+  //       }, 5000);
+  //     } else {
+  //       toast.success("Some thing went wrong");
+  //     }
+  //   }
+  // };
+
+  // const handleSubmit = async () => {
+  //   if (!localImages?.length) {
+  //     toast.error("Upload photos first");
+  //     return;
+  //   }
+
+  //   try {
+  //     for (let imgObj of localImages) {
+  //       if (imgObj.uploaded) continue;
+
+  //       const file = await base64ToFile(imgObj.base64, imgObj.name);
+  //       const formData = new FormData();
+  //       formData.append("files", file);
+
+  //       let res;
+  //       try {
+  //         res = await uploadImage({ id, formData }).unwrap();
+  //       } catch (err) {
+  //         console.error("Upload failed:", err);
+  //         toast.error("Upload failed, please try again");
+  //         continue;
+  //       }
+
+  //       imgObj.uploaded = true;
+  //       saveLocal(localImages);
+
+  //       if (res?.success) {
+  //         toast.success("Photos submitted successfully!");
+  //         setLocalImages([]);
+  //         localStorage.removeItem("localImages");
+  //         setOpen(false);
+
+  //         // setTimeout(() => {
+  //         //   // toast.info("We’ll email you when your holograms are ready");
+
+  //         //   setTimeout(() => {
+  //         //     localStorage.removeItem("accessToken");
+  //         //     navigate("/");
+  //         //   }, 3000);
+  //         // }, 5000);
+  //       } else {
+  //         toast.error("Something went wrong");
+  //       }
+  //     }
+  //   } catch (error) {
+  //     console.error("Unexpected error:", error);
+  //     toast.error("Something went wrong. Try again.");
+  //   }
+  // };
+
+  // const handleSubmit = async () => {
+  //   if (!localImages?.length) {
+  //     toast.error("Upload photos first");
+  //     return;
+  //   }
+
+  //   try {
+  //     for (let i = 0; i < localImages.length; i++) {
+  //       const imgObj = localImages[i];
+
+  //       if (imgObj.uploaded) continue;
+
+  //       const file = await base64ToFile(imgObj.base64, imgObj.name);
+  //       const formData = new FormData();
+  //       formData.append("files", file);
+
+  //       let res;
+  //       try {
+  //         res = await uploadImage({ id, formData }).unwrap();
+  //       } catch (err) {
+  //         console.error("Upload failed:", err);
+  //         toast.error("Upload failed, please try again");
+  //         continue;
+  //       }
+
+  //       // mark uploaded
+  //       imgObj.uploaded = true;
+  //       saveLocal(localImages);
+
+  //       if (res?.success && i === localImages?.length - 1) {
+  //         toast.success("Photos submitted successfully!");
+  //         setLocalImages([]);
+  //         localStorage.removeItem("localImages");
+  //         setOpen(false);
+
+  //         setTimeout(() => {
+  //           toast.info("We’ll email you when your holograms are ready");
+
+  //           setTimeout(() => {
+  //             localStorage.removeItem("accessToken");
+  //             navigate("/");
+  //           }, 3000);
+  //         }, 5000);
+  //       }
+  //     }
+  //   } catch (error) {
+  //     console.error("Unexpected error:", error);
+  //     toast.error("Something went wrong. Try again.");
+  //   }
+  // };
+
   const handleSubmit = async () => {
-    if (!localImages.length) {
+    if (!localImages?.length) {
       toast.error("Upload photos first");
       return;
     }
 
-    for (let imgObj of localImages) {
-      if (imgObj.uploaded) continue;
-
-      const file = await base64ToFile(imgObj.base64, imgObj.name);
-      const formData = new FormData();
-      formData.append("files", file);
-
-      const res = await uploadImage({ id, formData }).unwrap();
-
-      const uploadedList = res?.data || [];
-      const lastUploaded = uploadedList[uploadedList.length - 1];
-
-      imgObj.uploaded = true;
-      imgObj.photo_id = lastUploaded?.photo_id || null;
-    }
-
-    saveLocal(localImages);
-
-    const photo_ids = localImages
-      .filter((img) => img.photo_id)
-      .map((img) => img.photo_id);
-
-    if (!photo_ids.length) {
-      toast.error("No valid photo_ids found");
-      return;
-    }
-
     try {
-      await submitImages({ id, body: { photo_ids } }).unwrap();
+      const formData = new FormData();
 
-      toast.success("Photos submitted successfully!");
-      setLocalImages([]);
-      localStorage.removeItem("localImages");
-      setOpen(false);
+      for (let imgObj of localImages) {
+        const file = await base64ToFile(imgObj.base64, imgObj.name);
+        formData.append("files", file);
+      }
 
-      setTimeout(() => {
-        toast.info("We’ll email you when your holograms are ready");
+      let res;
+      try {
+        res = await uploadImage({ id, formData }).unwrap();
+      } catch (err) {
+        console.error("Upload failed:", err);
+        toast.error("Upload failed, please try again");
+        return;
+      }
+
+      if (res?.success) {
+        toast.success("Photos submitted successfully!");
+
+        setLocalImages([]);
+        localStorage.removeItem("localImages");
+        setOpen(false);
 
         setTimeout(() => {
-          localStorage.removeItem("accessToken");
-          navigate("/");
-        }, 3000);
-      }, 5000);
-    } catch (err) {
-      toast.error("Final submission failed!");
+          toast.info("We’ll email you when your holograms are ready");
+
+          setTimeout(() => {
+            localStorage.removeItem("accessToken");
+            navigate("/");
+          }, 3000);
+        }, 5000);
+      }
+    } catch (error) {
+      console.error("Unexpected error:", error);
+      toast.error("Something went wrong. Try again.");
     }
   };
 
   const handleOpen = () => setOpen(true);
-  const handleClose = () =>
-    submitLoading || uploadLoading ? () => {} : setOpen(false);
+  const handleClose = () => (uploadLoading ? () => {} : setOpen(false));
 
   // ---------------------------------------------------------
   // UI
@@ -305,10 +427,7 @@ const Images = () => {
               color="accent"
               onClick={() => fileInputRef.current.click()}
               disabled={
-                localImages.length >= 30 ||
-                uploadLoading ||
-                submitLoading ||
-                processingImages
+                localImages.length >= 30 || uploadLoading || processingImages
               }
               sx={uploadButton}
             >
@@ -327,9 +446,7 @@ const Images = () => {
             <Button
               variant="contained"
               onClick={handleOpen}
-              disabled={
-                uploadLoading || submitLoading || localImages.length === 0
-              }
+              disabled={uploadLoading || localImages.length === 0}
               sx={submitButton}
             >
               Submit Photos
@@ -341,13 +458,11 @@ const Images = () => {
           open={open}
           onClose={handleClose}
           onConfirm={handleSubmit}
-          cancelLoading={submitLoading || uploadLoading}
-          confirmLoading={submitLoading || uploadLoading}
+          cancelLoading={uploadLoading}
+          confirmLoading={uploadLoading}
           content={
             uploadLoading
               ? "Your images are being uploaded. Please wait..."
-              : submitLoading
-              ? "Your photos are being submitted. Please wait..."
               : "Click cancel to upload more images or confirm to submit."
           }
         />

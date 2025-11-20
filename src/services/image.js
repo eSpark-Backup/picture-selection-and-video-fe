@@ -1,4 +1,4 @@
-import { IMAGES, SINGLE_IMAGE, UPLOAD_IMAGE } from "../api/apiEndPoints";
+import { IMAGES, SINGLE_IMAGE, SUBMIT_IMAGES, UPLOAD_IMAGE } from "../api/apiEndPoints";
 import { apiSlice } from "../api/apiSlice";
 
 export const imageApiSlice = apiSlice.injectEndpoints({
@@ -29,7 +29,7 @@ export const imageApiSlice = apiSlice.injectEndpoints({
 
     uploadImage: builder.mutation({
       query: ({ id, formData }) => ({
-        url: `${UPLOAD_IMAGE}${id}`,
+        url: `${SUBMIT_IMAGES}${id}`,
         method: "POST",
         body: formData,
       }),

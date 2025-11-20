@@ -1,21 +1,25 @@
 import { Box, Grid, LinearProgress, Stack, Typography } from "@mui/material";
 import { useNavigate, useParams } from "react-router-dom";
 import HighlightOffIcon from "@mui/icons-material/HighlightOff";
-import {
-  useDeleteImageForReviewerMutation,
-  useGetDashboardQuery,
-} from "../services/reviewer";
+import { useDeleteImageForReviewerMutation } from "../services/reviewer";
 import { toast } from "react-toastify";
 import { DETAILED_STYLE } from "../style";
+import { useDispatch, useSelector } from "react-redux";
+import { setSelectedUser } from "../store/slices/selectedUserSlice";
+import { setSelectedImage } from "../store/slices/selectedImageSlice";
 
 const StandardImageList = ({
   userId = "",
   navigate,
   images = [],
+  user = {},
   handleDeleteImage = () => {},
 }) => {
   const { container, imageBox, image, iconStack, deleteIcon } =
     DETAILED_STYLE || {};
+
+  const dispatch = useDispatch();
+
   return (
     <Grid container spacing={2} maxWidth={1920} sx={container}>
       {images?.map((item, index) => (
@@ -26,7 +30,16 @@ const StandardImageList = ({
               src={item?.photo_url}
               alt={`${item?.photo_id}`}
               loading="lazy"
-              onClick={() => navigate(`/user/${userId}/${item?.photo_id}`)}
+              onClick={() => {
+                dispatch(
+                  setSelectedImage({
+                    photo_id: item?.photo_id,
+                    photo_url: item?.photo_url,
+                    status: item?.status,
+                  })
+                );
+                navigate(`/user/${userId}/${item?.photo_id}`);
+              }}
               sx={image}
             />
             <Stack
@@ -67,20 +80,22 @@ const Detailed = () => {
     useDeleteImageForReviewerMutation();
   const { id } = useParams();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
-  const { data, refetch, isLoading } = useGetDashboardQuery();
-
-  const users = data?.data || [];
-
-  const userImages =
-    users?.find((item) => item?.user_id === Number(id))?.photos || [];
+  const { user } = useSelector((state) => state.selectedUser) || {};
 
   const handleDeleteImage = async (id) => {
     try {
       const res = await deleteImage({ id }).unwrap();
       if (res?.success) {
         toast.success("Image deleted successfully!");
-        refetch();
+        if (user) {
+          const updatedUser = {
+            ...user,
+            photos: user?.photos?.filter((img) => img?.photo_id !== id),
+          };
+          dispatch(setSelectedUser(updatedUser));
+        }
       }
     } catch (err) {
       toast.error("Image delete failed!");
@@ -88,7 +103,7 @@ const Detailed = () => {
     }
   };
 
-  if (isLoading || deleteLoading) {
+  if (deleteLoading) {
     return <LinearProgress />;
   }
 
@@ -99,11 +114,12 @@ const Detailed = () => {
           Images
         </Typography>
       </Stack>
-      {userImages?.length > 0 ? (
+      {user?.photos?.length ? (
         <StandardImageList
+          user={user}
           userId={id}
           navigate={navigate}
-          images={userImages}
+          images={user?.photos}
           handleDeleteImage={handleDeleteImage}
         />
       ) : (

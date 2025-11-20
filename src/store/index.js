@@ -1,29 +1,33 @@
 import { configureStore } from "@reduxjs/toolkit";
 import { apiSlice } from "../api/apiSlice";
 import imagesReducer from "./slices/image/imageSlice";
+import selectedUserReducer from "./slices/selectedUserSlice"; 
 
 import { persistStore, persistReducer } from "redux-persist";
-import storage from "redux-persist/lib/storage"; // uses localStorage
+import storage from "redux-persist/lib/storage";
+import selectedImageSlice from "./slices/selectedImageSlice";
 
-// Persist config only for images slice
-const persistConfig = {
+const persistImagesConfig = {
   key: "reviewer",
   storage,
 };
 
-// Wrap only the images reducer
-const persistedImagesReducer = persistReducer(persistConfig, imagesReducer);
+const persistedImagesReducer = persistReducer(
+  persistImagesConfig,
+  imagesReducer
+);
 
 export const store = configureStore({
   reducer: {
     [apiSlice.reducerPath]: apiSlice.reducer,
-    reviewer: persistedImagesReducer, // persisted slice
+    reviewer: persistedImagesReducer,
+    selectedUser: selectedUserReducer,
+    selectedImage: selectedImageSlice,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
-      serializableCheck: false, // disable for redux-persist compatibility
+      serializableCheck: false,
     }).concat(apiSlice.middleware),
 });
 
-// Create persistor
 export const persistor = persistStore(store);

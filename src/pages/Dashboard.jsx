@@ -9,7 +9,9 @@ import { toast } from "react-toastify";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useDispatch } from "react-redux";
+import { setSelectedUser } from "../store/slices/selectedUserSlice";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -20,11 +22,16 @@ function formatToLocal(isoTimestamp) {
 }
 
 const DashboardPage = () => {
-  const [page, setPage] = useState(0); // DataGrid page starts 0
-  const [limit, setLimit] = useState(10); // pageSize
+  const [page, setPage] = useState(0);
+  const [limit, setLimit] = useState(10);
   const [createVideo, { isLoading: videoLoading }] = useCreateVideoMutation();
+  const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { data, isLoading: isUsersLoading } = useGetDashboardQuery({
+  const {
+    data,
+    refetch,
+    isLoading: isUsersLoading,
+  } = useGetDashboardQuery({
     page: page + 1,
     limit,
   });
@@ -45,7 +52,7 @@ const DashboardPage = () => {
         photos.length > 0
           ? photos.every((photo) => photo.status !== "pending")
           : false,
-      // photo_id: photos[0]?.photo_id || null,
+      photos: user.photos,
     };
   });
 
@@ -85,11 +92,17 @@ const DashboardPage = () => {
 
   const handleClickAction = (text, data) => {
     if (text === "view") {
+      dispatch(setSelectedUser(data));
+
       navigate(`/user/${data?.id}`);
     } else if (text === "edit") {
       handleCreateVideo(data);
     }
   };
+
+  useEffect(() => {
+    refetch();
+  }, [data]);
 
   if (isUsersLoading) {
     return <LinearProgress />;
@@ -111,6 +124,9 @@ const DashboardPage = () => {
           setPage={setPage}
           setLimit={setLimit}
           onPageChange={(newPage) => setPage(newPage)}
+          onPageSizeChange={(newLimit) => {
+            setLimit(newLimit);
+          }}
         />
       </Box>
     </Box>
