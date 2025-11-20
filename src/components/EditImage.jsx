@@ -16,11 +16,13 @@ import { toast } from "react-toastify";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   useEditImageMutation,
-  useGetImageByIdQuery,
   useUpdatePhotoStatusMutation,
 } from "../services/reviewer";
 import { createImage, getCroppedImg } from "../services/_utils";
 import { EDIT_IMAGE_STYLE } from "../style";
+import { useDispatch, useSelector } from "react-redux";
+import { setSelectedUser } from "../store/slices/selectedUserSlice";
+import { setSelectedImage } from "../store/slices/selectedImageSlice";
 
 const EditImage = () => {
   const {
@@ -42,17 +44,11 @@ const EditImage = () => {
   const [editImage, { isLoading: upLoading }] = useEditImageMutation();
   const [updatePhotoStatus, { isLoading: isUpdating }] =
     useUpdatePhotoStatusMutation();
-  const { data, isLoading, refetch } = useGetImageByIdQuery({
-    id: imageId,
-  });
+  const { image } = useSelector((state) => state?.selectedImage) || {};
+  const { user } = useSelector((state) => state?.selectedUser) || {};
 
   const [croppedBlob, setCroppedBlob] = useState(null);
-
-  const imageData = data?.data?.[0] || {};
-
-  const photoData = imageData?.photos?.find(
-    (item) => Number(item?.photo_id) === Number(imageId)
-  );
+  const dispatch = useDispatch();
 
   useEffect(() => {
     (async () => {
@@ -94,14 +90,35 @@ const EditImage = () => {
 
   const handleStatusChange = async (id, newStatus) => {
     try {
-      await updatePhotoStatus({
+      const res = await updatePhotoStatus({
         id,
         data: { status: newStatus.toLowerCase() },
       }).unwrap();
 
       toast.success("Status updated successfully!");
 
-      refetch();
+      const updatedStatus = res?.data?.status;
+
+      if (user) {
+        const updatedUser = {
+          ...user,
+          photos: user?.photos?.map((img) =>
+            img?.photo_id === res?.data?.photo_id
+              ? { ...img, status: updatedStatus }
+              : img
+          ),
+        };
+
+        dispatch(setSelectedUser(updatedUser));
+      }
+      if (image) {
+        const updateImage = {
+          ...image,
+          status: updatedStatus,
+        };
+
+        dispatch(setSelectedImage(updateImage));
+      }
     } catch (err) {
       console.error("❌ Failed to update:", err);
       toast.error("Status update failed! Please try again.");
@@ -110,7 +127,7 @@ const EditImage = () => {
 
   const handleCrop = useCallback(async () => {
     try {
-      if (!photoData?.photo_url) return null;
+      if (!image?.photo_url) return null;
 
       if (!croppedAreaPixels || croppedAreaPixels.width < 1) {
         toast.error("Please adjust the crop once before saving.");
@@ -118,7 +135,7 @@ const EditImage = () => {
       }
 
       const { blob, url } = await getCroppedImg(
-        photoData?.photo_url,
+        image?.photo_url,
         croppedAreaPixels
       );
 
@@ -139,7 +156,7 @@ const EditImage = () => {
       toast.error("Something went wrong while adjusting");
       return null;
     }
-  }, [photoData?.photo_url, croppedAreaPixels, detectFacesInBlob]);
+  }, [image?.photo_url, croppedAreaPixels, detectFacesInBlob]);
 
   const handleSave = useCallback(
     async (blobToUpload) => {
@@ -156,7 +173,7 @@ const EditImage = () => {
         } else {
           console.warn("No cropped blob found, uploading original image");
 
-          const response = await fetch(imageData?.photo_url);
+          const response = await fetch(image?.photo_url);
           const blobFromUrl = await response.blob();
 
           const fileType = blobFromUrl.type || "image/jpeg";
@@ -171,6 +188,20 @@ const EditImage = () => {
 
         if (res?.success) {
           toast.success("adjusted image uploaded successfully!");
+
+          const { photo_id, photo_url } = res?.data || {};
+
+          if (user) {
+            const updatedUser = {
+              ...user,
+              photos: user?.photos?.map((img) =>
+                img?.photo_id === photo_id
+                  ? { ...img, photo_id: photo_id, photo_url: photo_url }
+                  : img
+              ),
+            };
+            dispatch(setSelectedUser(updatedUser));
+          }
           navigate(`/user/${id}`);
         }
       } catch (err) {
@@ -178,7 +209,7 @@ const EditImage = () => {
         toast.error("Something went wrong during upload");
       }
     },
-    [editImage, id, imageData, navigate]
+    [editImage, id, image, navigate]
   );
 
   const handleCropThenSave = async () => {
@@ -190,16 +221,12 @@ const EditImage = () => {
   };
 
   useEffect(() => {
-    if (!photoData?.photo_url) return;
+    if (!image?.photo_url) return;
 
     setCrop({ x: 0, y: 0 });
     setZoom(1);
     setCroppedAreaPixels(null);
-  }, [photoData?.photo_url]);
-
-  if (isLoading) {
-    return <LinearProgress />;
-  }
+  }, [image?.photo_url]);
 
   return (
     <Box sx={mainBox}>
@@ -207,7 +234,7 @@ const EditImage = () => {
         <Grid size={12} sx={toolbarGrid}>
           <Toolbar
             onSave={handleCropThenSave}
-            onSaveLoading={upLoading || isLoading || isUpdating}
+            onSaveLoading={upLoading || isUpdating}
           />
         </Grid>
         <Guide />
@@ -216,8 +243,8 @@ const EditImage = () => {
           {cropping ? (
             <Box sx={cropBox}>
               <Cropper
-                key={photoData?.photo_url}
-                image={photoData?.photo_url}
+                key={image?.photo_url}
+                image={image?.photo_url}
                 crossOrigin="anonymous"
                 crop={crop}
                 zoom={zoom}
@@ -242,10 +269,10 @@ const EditImage = () => {
               sx={croppedImage}
               crossOrigin="anonymous"
             />
-          ) : photoData?.photo_url ? (
+          ) : image?.photo_url ? (
             <Box
               component="img"
-              src={photoData?.photo_url}
+              src={image?.photo_url}
               sx={croppedImage}
               crossOrigin="anonymous"
             />
@@ -263,14 +290,14 @@ const EditImage = () => {
                 onChange={(e, z) => setZoom(z)}
               />
               <Typography variant="body1">
-                Status: {photoData?.status || "pending"}
+                Status: {image?.status || "pending"}
               </Typography>
               <Stack direction={"row"} spacing={1.5}>
                 <Button
                   variant="contained"
                   disabled={isUpdating || upLoading}
                   onClick={() =>
-                    handleStatusChange(photoData?.photo_id, "approved")
+                    handleStatusChange(image?.photo_id, "approved")
                   }
                   sx={button}
                 >
@@ -281,7 +308,7 @@ const EditImage = () => {
                   disabled={isUpdating || upLoading}
                   color="accent"
                   onClick={() =>
-                    handleStatusChange(photoData?.photo_id, "rejected")
+                    handleStatusChange(image?.photo_id, "rejected")
                   }
                   sx={button}
                 >
@@ -294,7 +321,7 @@ const EditImage = () => {
             <Button
               variant="contained"
               onClick={() => navigate(`/user/${id}`)}
-              disabled={upLoading || isLoading || isUpdating}
+              disabled={upLoading || isUpdating}
               sx={button}
             >
               {"Go to back"}
