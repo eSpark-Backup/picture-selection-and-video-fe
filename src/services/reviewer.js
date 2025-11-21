@@ -6,6 +6,7 @@ import {
   REVIEWER_CREATE_VIDEO,
   REVIEWER_DASHBOARD,
   REVIEWER_LOGIN,
+  REVIEWER_CREATE_URL,
 } from "../api/apiEndPoints";
 
 import { apiSlice } from "../api/apiSlice";
@@ -54,6 +55,11 @@ export const reviewerApiSlice = apiSlice.injectEndpoints({
       providesTags: ["single-image"],
     }),
 
+    getImageUrlById: builder.query({
+      query: ({ id }) => `${REVIEWER_CREATE_URL}${id}`,
+      method: "GET",
+    }),
+
     editImage: builder.mutation({
       query: ({ id, formData }) => ({
         url: `${REVIEWER_EDIT_PHOTO}${id}`,
@@ -87,6 +93,7 @@ export const {
   useUpdatePhotoStatusMutation,
   useEditImageMutation,
   useGetImageByIdQuery,
+  useGetImageUrlByIdQuery,
   useDeleteImageForReviewerMutation,
   useCreateVideoMutation,
   useGetDashboardQuery,
