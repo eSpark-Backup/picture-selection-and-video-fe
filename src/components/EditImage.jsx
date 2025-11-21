@@ -1,13 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import {
-  Box,
-  Grid,
-  Slider,
-  Button,
-  Stack,
-  LinearProgress,
-  Typography,
-} from "@mui/material";
+import { Box, Grid, Slider, Button, Stack, Typography } from "@mui/material";
 import Cropper from "react-easy-crop";
 import * as faceapi from "face-api.js";
 import Toolbar from "../components/Toolbar";
@@ -16,6 +8,7 @@ import { toast } from "react-toastify";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   useEditImageMutation,
+  useGetImageUrlByIdQuery,
   useUpdatePhotoStatusMutation,
 } from "../services/reviewer";
 import { createImage, getCroppedImg } from "../services/_utils";
@@ -46,9 +39,11 @@ const EditImage = () => {
     useUpdatePhotoStatusMutation();
   const { image } = useSelector((state) => state?.selectedImage) || {};
   const { user } = useSelector((state) => state?.selectedUser) || {};
-
+  const { data } = useGetImageUrlByIdQuery({ id: imageId });
   const [croppedBlob, setCroppedBlob] = useState(null);
   const dispatch = useDispatch();
+
+  const canSave = crop.x === 0 && crop.y === 0 && zoom === 1;
 
   useEffect(() => {
     (async () => {
@@ -126,6 +121,7 @@ const EditImage = () => {
   };
 
   const handleCrop = useCallback(async () => {
+    const dataURL = data?.data;
     try {
       if (!image?.photo_url) return null;
 
@@ -134,10 +130,7 @@ const EditImage = () => {
         return;
       }
 
-      const { blob, url } = await getCroppedImg(
-        image?.photo_url,
-        croppedAreaPixels
-      );
+      const { blob, url } = await getCroppedImg(dataURL, croppedAreaPixels);
 
       const hasFace = await detectFacesInBlob(blob);
       if (!hasFace) {
@@ -220,19 +213,12 @@ const EditImage = () => {
     }
   };
 
-  useEffect(() => {
-    if (!image?.photo_url) return;
-
-    setCrop({ x: 0, y: 0 });
-    setZoom(1);
-    setCroppedAreaPixels(null);
-  }, [image?.photo_url]);
-
   return (
     <Box sx={mainBox}>
       <Grid container sx={gridContainer}>
         <Grid size={12} sx={toolbarGrid}>
           <Toolbar
+            onSaveDisabled={canSave}
             onSave={handleCropThenSave}
             onSaveLoading={upLoading || isUpdating}
           />

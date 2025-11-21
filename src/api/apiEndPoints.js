@@ -12,6 +12,7 @@ const REVIEWER_EDIT_PHOTO = "/reviewer/photos/";
 const REVIEWER_GET_PHOTO_BY_ID = "/reviewer/photos/";
 const REVIEWER_DELETE_PHOTO_BY_ID = "/reviewer/photos/";
 const REVIEWER_CREATE_VIDEO = "/reviewer/create-video";
+const REVIEWER_CREATE_URL = "/reviewer/photos/base64/";
 const REVIEWER_DASHBOARD = "/reviewer/dashboard";
 
 export {
@@ -25,6 +26,7 @@ export {
   REVIEWER_EDIT_PHOTO,
   REVIEWER_GET_PHOTO_BY_ID,
   REVIEWER_DELETE_PHOTO_BY_ID,
+  REVIEWER_CREATE_URL,
   REVIEWER_CREATE_VIDEO,
   REVIEWER_DASHBOARD,
 };
