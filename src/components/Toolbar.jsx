@@ -44,7 +44,7 @@ const Toolbar = ({
             textTransform: "none",
             color: "black",
             fontWeight: 500,
-            cursor: "pointer",
+            // cursor: "pointer",
             "&:hover span": {
               color: "primary.main",
             },
@@ -59,9 +59,7 @@ const Toolbar = ({
           ) : (
             <>
               <Box component={"img"} src={adjust} width={38} />
-              <Typography variant="body1">
-                {onSaveDisabled ? "Adjusting.." : item.label}
-              </Typography>
+              <Typography variant="body1">{item?.label}</Typography>
             </>
           )}
         </Stack>
