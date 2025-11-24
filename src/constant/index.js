@@ -53,7 +53,7 @@ const REVIEWER_FORM = {
   fields: [
     {
       name: "username",
-      label: "Email",
+      label: "email",
       placeholder: "Enter Email",
       type: "email",
     },
