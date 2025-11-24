@@ -43,7 +43,7 @@ const EditImage = () => {
   const [croppedBlob, setCroppedBlob] = useState(null);
   const dispatch = useDispatch();
 
-  const canSave = crop.x === 0 && crop.y === 0 && zoom === 1;
+  const canSave = crop?.x === 0 && crop?.y === 0 && zoom === 1;
 
   useEffect(() => {
     (async () => {
@@ -151,6 +151,18 @@ const EditImage = () => {
     }
   }, [image?.photo_url, croppedAreaPixels, detectFacesInBlob]);
 
+  const resetCropState = () => {
+    if (croppedImageUrl) {
+      URL.revokeObjectURL(croppedImageUrl);
+    }
+
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+    setCroppedAreaPixels(null);
+    setCroppedBlob(null);
+    setCroppedImageUrl(null);
+  };
+
   const handleSave = useCallback(
     async (blobToUpload) => {
       try {
@@ -195,7 +207,8 @@ const EditImage = () => {
             };
             dispatch(setSelectedUser(updatedUser));
           }
-          navigate(`/user/${id}`);
+          resetCropState();
+          window.location.href = `/user/${id}`;
         }
       } catch (err) {
         console.error("Upload error:", err);
