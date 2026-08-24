@@ -21,7 +21,7 @@
     "dayjs": "^1.11.21",
     "face-api.js": "^0.22.2",
     "formik": "^2.4.6",
-    "framer-motion": "^12.23.13",
+    "framer-motion": "^13.1.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-easy-crop": "^6.0.2",
